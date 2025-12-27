@@ -73,6 +73,10 @@
         CIK (don't upload file):
         <input type="text" name="cik">
     </label>
+    <label>
+        Company (don't upload file nor precise CIK):
+        <input type="text" name="company">
+    </label>
     <label for="year">Year for CIK</label>
     <input
         type="number"
@@ -81,7 +85,7 @@
         min="1900"
         max="2100"
         step="1"
-        placeholder="2024"
+        placeholder="2025"
     >
 
     <label>
@@ -113,17 +117,18 @@
         <label>
             <input type="radio"
                    name="output_type"
-                   value="png"
+                   value="text"
                    checked>
-            Highlighted PNG (Only supports pdf)
+            First match text (context)
         </label>
 
         <label>
             <input type="radio"
                    name="output_type"
-                   value="text">
-            First match text (context)
+                   value="png">
+            Highlighted PNG (Only supports pdf)
         </label>
+
 
         <label>
             <input type="radio"

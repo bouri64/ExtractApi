@@ -3,6 +3,8 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from Levenshtein import distance
+import pandas as pd
 import fitz  # PyMuPDF
 import re
 import tempfile
@@ -42,10 +44,11 @@ async def search_pdf(
     pattern: str = Form(...),
     before: int = Form(20),
     after: int = Form(20),
-    output_type: str = Form("png"),
+    output_type: str = Form("text"),
     base: str = Form(""),
     cik: str = Form(""), ## AAPL CIK 0000320193
-    year: int = Form(2024)
+    year: int = Form(2025),
+    company: str = Form("")
 ):
     regex = re.compile(pattern)
     suffix = Path(file.filename).suffix.lower()
@@ -54,6 +57,9 @@ async def search_pdf(
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(await file.read())
             file_path = tmp.name
+    if company != "":
+        cik = str(get_company_cik(company))
+        cik = (10 - len(cik))*"0" + cik
     if suffix == ".txt" or cik != "":
         if cik != "":
             text = get_company_10K(cik, year)
@@ -202,3 +208,36 @@ def get_company_10K(cik: str, year: int):
     soup = BeautifulSoup(ten_k, "html.parser")
     text = soup.get_text(separator=" ", strip=True)
     return text
+
+
+def get_company_cik(company:str):
+    df = pd.read_csv("./data/constituents.csv", index_col=None)
+    df = df[["Symbol", "Security", "CIK"]]
+    if company in df["Symbol"].values:
+        row = df.loc[df["Symbol"] == company].iloc[0]
+        print("CIK recovered from symbol: ", row["CIK"])
+        return row["CIK"]
+    
+    if company in df["Security"].values:
+        row = df.loc[df["Security"] == company].iloc[0]
+        print("CIK recovered from security: ", row["CIK"])
+        return row["CIK"]
+    
+    matches = df[df['Security'].str.contains(company.lower(), case=False, na=False)]
+    if (len(matches)):
+        row = matches.iloc[0]
+        print("CIK recovered from security (name substr): ", row["CIK"])
+        return row["CIK"]
+
+    df["lev_distance"] = df["Security"].apply(lambda x: distance(x.lower(), company.lower()))
+
+    # Get the row with the smallest distance
+    closest_row = df.loc[df["lev_distance"].idxmin()]
+    if (len(closest_row)):
+        print(f"CIK recovered from closest company {closest_row['Security']} with distance {closest_row['lev_distance']}: {closest_row['CIK']}")
+        return closest_row["CIK"]
+    print("Couldn't find CIK")
+    return ""
+    
+
+    
