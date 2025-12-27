@@ -9,6 +9,7 @@ import tempfile
 import os
 import requests
 from bs4 import BeautifulSoup
+from typing import Optional
 
 def clean_html(text: str) -> str:
     soup = BeautifulSoup(text, "html.parser")
@@ -37,25 +38,25 @@ def home():
 
 @app.post("/search")
 async def search_pdf(
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
     pattern: str = Form(...),
     before: int = Form(20),
     after: int = Form(20),
     output_type: str = Form("png"),
     base: str = Form(""),
-    cik: str = Form("")
+    cik: str = Form(""), ## AAPL CIK 0000320193
+    year: int = Form(2024)
 ):
-    print("hi")
     regex = re.compile(pattern)
     suffix = Path(file.filename).suffix.lower()
-
-    # Save uploaded PDF
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        tmp.write(await file.read())
-        file_path = tmp.name
+    if (file is not None):
+        # Save uploaded PDF
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(await file.read())
+            file_path = tmp.name
     if suffix == ".txt" or cik != "":
         if cik != "":
-            text = get_company_10K(cik, 2024)
+            text = get_company_10K(cik, year)
             print("Got company")
         else:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -73,13 +74,13 @@ async def search_pdf(
         first_match_data = {
             "text": context,
         }
-        if output_type == "text":
-            return {
-                "first_match": context,
-                "total_hits": len(matches)
-            }
+        if output_type == "parse":
+            return parse_first_match(first_match_data["text"], base)
+        return {
+            "first_match": context,
+            "total_hits": len(matches)
+        }
     
-        return parse_first_match(first_match_data["text"], base)
 
     doc = fitz.open(file_path)
 
@@ -186,8 +187,9 @@ def get_company_10K(cik: str, year: int):
     resp = requests.get(url, headers=headers)
     data = resp.json()
     filings = data["filings"]["recent"]
+    print(f"Year is {year}")
     for i, form in enumerate(filings["form"]):
-        if form == "10-K" and filings["filingDate"][i].startswith("2024"):
+        if form == "10-K" and filings["filingDate"][i].startswith(str(year)):
             accession = filings["accessionNumber"][i].replace("-", "")
             primary_doc = filings["primaryDocument"][i]
             print(accession, primary_doc)
