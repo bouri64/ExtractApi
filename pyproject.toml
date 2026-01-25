@@ -6,7 +6,6 @@ dependencies = [
     "fastapi==0.128.0",
     "mangum==0.20.0",
     "Levenshtein==0.27.3",
-    "fitz==0.0.1.dev2",
     "frontend==0.0.3",
     "groq==1.0.0",
     "tools==1.0.21",
