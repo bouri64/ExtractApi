@@ -4,7 +4,6 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from Levenshtein import distance
-import pandas as pd
 import fitz  # PyMuPDF
 import re
 import tempfile
@@ -12,7 +11,6 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from typing import Optional
-from openai import OpenAI
 from groq import Groq
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
