@@ -305,4 +305,36 @@ def get_company_cik(company:str):
     return ""
     
 
-    
+@app.get("/parse")    
+def parse_text(
+    year: int,
+    cik: str = "", ## AAPL CIK 0000320193
+    company: str = "",
+    base: str = "",
+    model: str = "openai/gpt-oss-120b",
+    pattern: str = "(?:Basic earnings|Basic net income|Earnings|Net income) per (?:common )?share",
+    before: int = 2000,
+    after: int = 800
+):
+    # regex = re.compile(pattern, re.IGNORECASE)
+    regex = re.compile(pattern)
+    if company != "":
+        cik = str(get_company_cik(company))
+        cik = (10 - len(cik))*"0" + cik
+    if cik != "":
+        text = get_company_10K(cik, year)
+        print("Got company")
+    print("Text length before cleaning: ", len(text))
+    text = clean_html(text)
+    print("Text length after cleaning: ", len(text))
+    context = "N/A"
+    matches = list(regex.finditer(text))
+    if matches:
+        match = matches[0]
+        start, end = match.span()
+
+        context = text[max(0, start - before): min(len(text)-1, end + after)]
+    first_match_data = {
+        "text": context,
+    }
+    return parse_groq(first_match_data["text"], base, model)
